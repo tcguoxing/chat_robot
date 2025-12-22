@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Package manager files
+
+
+# NestJS temporary files
+*.tmp
