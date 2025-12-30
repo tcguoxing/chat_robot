@@ -1,32 +1,3 @@
-我需要先了解这个项目的结构和内容，然后给出一个清晰的描述。首先查看项目根目录的文件结构。
-        
-            
-toolName: view_folder
-            
-status: success
-          
-/Users/tcguoxing/Code/full-stack-test
-          
-我需要查看项目的关键文件，了解前后端的具体技术栈和功能。首先查看后端的package.json文件。
-        
-            
-toolName: view_files
-            
-status: success
-          
-            
-filePath: /Users/tcguoxing/Code/full-stack-test/be/package.json
-          
-现在查看前端的package.json文件，了解前端的技术栈。
-        
-            
-toolName: view_files
-            
-status: success
-          
-            
-filePath: /Users/tcguoxing/Code/full-stack-test/fe/package.json
-          
 这是一个前后端分离的全栈Web应用，主要用于用户管理和认证服务。
 
 ### 项目结构
