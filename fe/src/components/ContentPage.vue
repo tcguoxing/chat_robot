@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { getOtherUsersApi, getContentApi, getRecentVisitorsApi, uploadContentApi } from '../api'
 import type { UserInfo, ContentItem, VisitorInfo, UploadRequest } from '../api'
+import WeatherInfo from './WeatherInfo.vue'
 
 const router = useRouter()
 
@@ -266,13 +267,17 @@ const handleLogout = () => {
     <!-- Middle Column -->
     <main class="middle-column">
       <!-- Top Section: Other Users -->
+      <section role="weatherAI" >
+        <h2 class="section-title">getCurrentWeather</h2>
+        <weather-info/>
+      </section>
       <section class="other-users-section">
         <h2 class="section-title">Other Users</h2>
         <div class="users-scroll-container">
           <div v-if="loadingUsers" class="loading-container">
             <el-skeleton :rows="1" animated />
           </div>
-          <div v-else class="users-list">
+          <div v-else-if="otherUsers.length > 0" class="users-list">
             <div 
               v-for="user in otherUsers" 
               :key="user.id" 
