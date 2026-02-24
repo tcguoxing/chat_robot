@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { InviteCodeModule } from './invite-codes/invite-code.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from './auth/auth.module';
     InviteCodeModule,
     AuthModule,
     UsersModule,
+    AiModule
   ],
   controllers: [AppController],
   providers: [AppService],
