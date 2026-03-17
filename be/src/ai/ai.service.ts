@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import AiOperator from "./weather/AiOperator";
+import AiOperator from "./operator/AiOperator";
+
+// todo 缺少app引入以及权限证明；
 
 @Injectable()
 export class AiService {
@@ -7,16 +9,9 @@ export class AiService {
   constructor() {
     this.aiOperator = new AiOperator()
   }
-  getWeatherService(city): any {
-    console.log('city: ', city)
-    return this.aiOperator.getWeatherInfo(city)
-  }
+
   searchInfo(info) {
     return this.aiOperator.searchInfo(info)
-  }
-
-
-  getAiService(): any {
   }
   
 }
