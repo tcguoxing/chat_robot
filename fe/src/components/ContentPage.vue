@@ -4,7 +4,6 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { getOtherUsersApi, getContentApi, getRecentVisitorsApi, uploadContentApi } from '../api'
 import type { UserInfo, ContentItem, VisitorInfo, UploadRequest } from '../api'
-import WeatherInfo from './WeatherInfo.vue'
 
 const router = useRouter()
 

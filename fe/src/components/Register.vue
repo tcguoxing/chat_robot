@@ -16,8 +16,6 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  email: '',
-  phone: '',
   inviteCode: ''
 })
 
@@ -49,14 +47,6 @@ const rules = {
       }, 
       trigger: 'blur' 
     }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' }
   ],
   inviteCode: [
     { required: true, message: '请输入邀请码', trigger: 'blur' },
@@ -96,8 +86,6 @@ const handleRegister = async () => {
           const registerParams: RegisterRequest = {
             username: registerForm.username,
             password: encryptedPassword,
-            email: registerForm.email,
-            phone: registerForm.phone,
             inviteCode: registerForm.inviteCode
           }
           
@@ -179,26 +167,6 @@ const goToLogin = () => {
             placeholder="请再次输入密码"
             prefix-icon="Check"
             show-password
-            size="large"
-          />
-        </el-form-item>
-        
-        <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="registerForm.email"
-            type="email"
-            placeholder="请输入邮箱地址"
-            prefix-icon="Message"
-            size="large"
-          />
-        </el-form-item>
-        
-        <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="registerForm.phone"
-            type="tel"
-            placeholder="请输入手机号码"
-            prefix-icon="Phone"
             size="large"
           />
         </el-form-item>

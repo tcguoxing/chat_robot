@@ -46,8 +46,8 @@ export interface LoginResponse {
 // 注册请求参数类型（对应swagger RegisterUserDto）
 export interface RegisterRequest {
   username: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   password: string;
   inviteCode: string;
 }
