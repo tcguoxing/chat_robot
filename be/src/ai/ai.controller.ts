@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Query,
-  UseGuards
-} from '@nestjs/common';
+import { Controller, Post, Get, Query, UseGuards } from '@nestjs/common';
 
 import { AiService } from './ai.service';
 import { log } from 'console';
@@ -12,12 +6,12 @@ import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller()
 export class AiController {
-  constructor(private readonly aiService:AiService){}
+  constructor(private readonly aiService: AiService) {}
 
   @UseGuards(AuthGuard)
   @Get('search')
   searchInfo(@Query() query): string {
-    const {info} = query
-    return this.aiService.searchInfo(info)
+    const { info } = query;
+    return this.aiService.searchInfo(info);
   }
 }

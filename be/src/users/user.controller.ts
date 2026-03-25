@@ -14,7 +14,6 @@ import { AuthService } from '../auth/auth.service';
 import {
   RegisterUserDto,
   LoginUserDto,
-  LoginWithPhoneDto,
   UpdateUserDto,
   UserResponseDto,
   LoginResponseDto,
@@ -60,40 +59,8 @@ export class UserController {
    */
   @Post('login')
   async login(@Body() loginDto: LoginUserDto): Promise<LoginResponseDto> {
-    // 检查是否提供了用户名或邮箱
-    if (!loginDto.username && !loginDto.email) {
-      throw new Error('请提供用户名或邮箱');
-    }
-
-    // 使用用户名或邮箱进行验证
-    const loginCredential = loginDto.username || loginDto.email;
-
-    // 验证用户凭证
-    const user = await this.authService.validateUser(
-      loginCredential as string,
-      loginDto.password,
-    );
-    // 生成JWT令牌
-    const token = await this.authService.generateToken(user);
-    return {
-      accessToken: token,
-      user: this.transformUserResponse(user),
-    };
-  }
-
-  /**
-   * 用户登录接口（手机号+密码）
-   * @description 使用手机号和密码登录系统
-   * @param loginDto 登录请求数据
-   * @returns JWT令牌和用户信息
-   */
-  @Post('login/phone')
-  async loginWithPhone(
-    @Body() loginDto: LoginWithPhoneDto,
-  ): Promise<LoginResponseDto> {
-    // 验证用户凭证
-    const user = await this.authService.validateUserByPhone(
-      loginDto.phone,
+    const user = await this.authService.validateUserByUsername(
+      loginDto.username,
       loginDto.password,
     );
     // 生成JWT令牌
@@ -137,9 +104,8 @@ export class UserController {
    */
   @UseGuards(AuthGuard) // JWT认证守卫
   @Get('me')
-  async getCurrentUser(@Request() req): Promise<UserResponseDto> {
-    // req.user 由AuthGuard注入，包含认证后的用户信息
-    const user = await this.userService.getCurrentUser(req.user);
+  getCurrentUser(@Request() req: { user: UserDocument }): UserResponseDto {
+    const user = this.userService.getCurrentUser(req.user);
     return this.transformUserResponse(user);
   }
 
@@ -183,9 +149,6 @@ export class UserController {
     return {
       id: user._id.toString(), // 转换ObjectId为字符串
       username: user.username,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

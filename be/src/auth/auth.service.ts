@@ -63,73 +63,6 @@ export class AuthService {
   }
 
   /**
-   * 验证用户凭证（邮箱/用户名+密码）
-   * @description 检查邮箱或用户名和密码是否匹配，验证用户身份
-   * @param emailOrUsername 邮箱地址或用户名
-   * @param encryptedPassword 加密的密码
-   * @returns 验证通过的用户文档
-   * @throws UnauthorizedException 邮箱/用户名或密码错误
-   */
-  async validateUser(
-    emailOrUsername: string,
-    encryptedPassword: string,
-  ): Promise<UserDocument> {
-    // 1. 根据邮箱或用户名查找用户
-    const user = await this.userModel
-      .findOne({
-        $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
-      })
-      .exec();
-    if (!user) {
-      throw new UnauthorizedException('邮箱/用户名或密码错误');
-    }
-
-    // 2. 解密RSA加密的密码
-    const password = this.cryptoService.decrypt(encryptedPassword);
-    // console.log(`89 Decrypted password: ${password}`);
-    // console.log(`89 Decrypted password: ${user.password}`);
-
-    // 3. 比较密码（bcrypt验证）
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('邮箱/用户名或密码错误');
-    }
-
-    return user;
-  }
-
-  /**
-   * 验证用户凭证（手机号+密码）
-   * @description 检查手机号和密码是否匹配，验证用户身份
-   * @param phone 手机号
-   * @param encryptedPassword 加密的密码
-   * @returns 验证通过的用户文档
-   * @throws UnauthorizedException 手机号或密码错误
-   */
-  async validateUserByPhone(
-    phone: string,
-    encryptedPassword: string,
-  ): Promise<UserDocument> {
-    // 1. 根据手机号查找用户
-    const user = await this.userModel.findOne({ phone }).exec();
-    if (!user) {
-      throw new UnauthorizedException('手机号或密码错误');
-    }
-
-    // 2. 解密RSA加密的密码
-    const password = this.cryptoService.decrypt(encryptedPassword);
-    console.log(`120 Decrypted password: ${password}`);
-
-    // 3. 比较密码（bcrypt验证）
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('手机号或密码错误');
-    }
-
-    return user;
-  }
-
-  /**
    * 生成JWT令牌
    * @description 为验证通过的用户生成JWT访问令牌
    * @param user 用户文档
@@ -142,7 +75,6 @@ export class AuthService {
     const payload = {
       username: user.username,
       sub: user._id.toString(), // 用作用户唯一标识
-      role: user.role, // 用户角色
     };
 
     // 生成JWT令牌

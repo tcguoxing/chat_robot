@@ -29,7 +29,7 @@ import { AiModule } from './ai/ai.module';
     InviteCodeModule,
     AuthModule,
     UsersModule,
-    AiModule
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

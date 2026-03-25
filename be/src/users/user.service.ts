@@ -48,15 +48,9 @@ export class UserService {
     // 1. 验证邀请码有效性
     await this.inviteCodeService.validateInviteCode(registerDto.inviteCode);
 
-    // 2. 检查用户名、邮箱、手机号是否已被注册
+    // 2. 检查用户名是否已被注册
     const existingUser = await this.userModel
-      .findOne({
-        $or: [
-          { username: registerDto.username },
-          { email: registerDto.email },
-          { phone: registerDto.phone },
-        ],
-      })
+      .findOne({ username: registerDto.username })
       .exec();
 
     // 3. 处理重复数据情况
@@ -65,13 +59,7 @@ export class UserService {
         `Registration failed: User already exists - ${registerDto.username}`,
       );
 
-      if (existingUser.username === registerDto.username) {
-        throw new ConflictException('用户名已存在');
-      } else if (existingUser.email === registerDto.email) {
-        throw new ConflictException('邮箱已存在');
-      } else {
-        throw new ConflictException('手机号已存在');
-      }
+      throw new ConflictException('用户名已存在');
     }
 
     try {
@@ -87,13 +75,11 @@ export class UserService {
       // 6. 创建新用户
       const user = new this.userModel({
         username: registerDto.username,
-        email: registerDto.email,
-        phone: registerDto.phone,
         password: hashedPassword,
       });
 
       // 7. 保存用户到数据库
-      const savedUser = await user.save();
+      const savedUser = (await user.save()) as unknown as UserDocument;
 
       // 8. 标记邀请码为已使用（确保在用户保存成功后执行）
       try {
@@ -101,22 +87,23 @@ export class UserService {
           registerDto.inviteCode,
           savedUser._id,
         );
-      } catch (error) {
-        // 如果邀请码更新失败，删除已创建的用户以保持数据一致性
+      } catch (e) {
         await this.userModel.findByIdAndDelete(savedUser._id).exec();
+        const msg = e instanceof Error ? e.message : String(e);
         this.logger.error(
-          `Invite code usage failed for user ${savedUser.username}: ${error.message}`,
+          `Invite code usage failed for user ${savedUser.username}: ${msg}`,
         );
-        throw new Error(`邀请码使用失败: ${error.message}`);
+        throw new Error(`邀请码使用失败: ${msg}`);
       }
 
       this.logger.log(`User registered successfully: ${savedUser.username}`);
       return savedUser;
-    } catch (error) {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       this.logger.error(
-        `Registration failed for user ${registerDto.username}: ${error.message}`,
+        `Registration failed for user ${registerDto.username}: ${msg}`,
       );
-      throw error;
+      throw e;
     }
   }
 
@@ -145,65 +132,23 @@ export class UserService {
   }
 
   /**
-   * 根据邮箱获取用户
-   * @description 根据邮箱地址查询用户
-   * @param email 邮箱地址
-   * @returns 用户文档
-   * @throws NotFoundException 用户不存在
-   */
-  async findByEmail(email: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne({ email }).exec();
-    if (!user) {
-      throw new NotFoundException('用户不存在');
-    }
-    return user;
-  }
-
-  /**
-   * 根据手机号获取用户
-   * @description 根据手机号查询用户
-   * @param phone 手机号
-   * @returns 用户文档
-   * @throws NotFoundException 用户不存在
-   */
-  async findByPhone(phone: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne({ phone }).exec();
-    if (!user) {
-      throw new NotFoundException('用户不存在');
-    }
-    return user;
-  }
-
-  /**
    * 更新用户信息
    * @description 根据ID更新用户信息，包括数据校验和密码加密
    * @param id 用户ID
    * @param updateDto 更新请求数据
    * @returns 更新后的用户文档
-   * @throws ConflictException 用户名/邮箱/手机号已被其他用户使用
+   * @throws ConflictException 用户名已被其他用户使用
    * @throws NotFoundException 用户不存在
    */
   async update(id: string, updateDto: UpdateUserDto): Promise<UserDocument> {
     // 1. 检查更新的字段是否已被其他用户使用
-    if (updateDto.username || updateDto.email || updateDto.phone) {
-      const query: any = { _id: { $ne: id } }; // 排除当前用户
-      const orConditions: any[] = [];
-
-      if (updateDto.username) {
-        orConditions.push({ username: updateDto.username });
-      }
-      if (updateDto.email) {
-        orConditions.push({ email: updateDto.email });
-      }
-      if (updateDto.phone) {
-        orConditions.push({ phone: updateDto.phone });
-      }
-
-      query.$or = orConditions;
-      const existingUser = await this.userModel.findOne(query).exec();
+    if (updateDto.username) {
+      const query: Record<string, unknown> = { _id: { $ne: id } };
+      query.username = updateDto.username;
+      const existingUser = await this.userModel.findOne(query as any).exec();
 
       if (existingUser) {
-        throw new ConflictException('用户名、邮箱或手机号已存在');
+        throw new ConflictException('用户名已存在');
       }
     }
 
@@ -249,7 +194,7 @@ export class UserService {
    * @param user 认证后的用户文档
    * @returns 用户文档
    */
-  async getCurrentUser(user: UserDocument): Promise<UserDocument> {
+  getCurrentUser(user: UserDocument): UserDocument {
     return user;
   }
 }
