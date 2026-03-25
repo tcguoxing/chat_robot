@@ -65,8 +65,14 @@ const handleLogin = async () => {
           if (loginRes.code === 200) {
             ElMessage.success(loginRes.message)
             console.log('登录成功:', loginRes.data)
-            // 登录成功后跳转到内容页面
-            router.push('/content')
+            
+            // 保存 token
+            if (loginRes.data && loginRes.data.accessToken) {
+              localStorage.setItem('chatToken', loginRes.data.accessToken)
+            }
+            
+            // 登录成功后跳转到聊天页面
+            router.push('/chat')
           } else {
             ElMessage.error(loginRes.message || '登录失败')
           }

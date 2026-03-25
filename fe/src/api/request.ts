@@ -41,7 +41,7 @@ class Request {
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         // 添加认证信息
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('chatToken');
         if (token) {
           if (!config.headers) {
             config.headers = {} as AxiosHeaders;
