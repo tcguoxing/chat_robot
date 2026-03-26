@@ -67,6 +67,7 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { Paperclip, Delete, Position, UserFilled } from '@element-plus/icons-vue'
+import {askKimi} from '../api/ai'
 defineOptions({name: 'Chat'})
 console.log('chat component')
 
@@ -104,13 +105,20 @@ const handleSend = () => {
   scrollToBottom()
 
   // 2. 模拟 AI 回复（实际项目中这里会调用接口）
-  setTimeout(() => {
+  askKimi({info: userInput.value}).then(data => {
     messages.value.push({
       role: 'assistant',
       content: '这是一个模拟回复。你刚刚说：' + content
     })
     scrollToBottom()
-  }, 800)
+  })
+  // setTimeout(() => {
+  //   messages.value.push({
+  //     role: 'assistant',
+  //     content: '这是一个模拟回复。你刚刚说：' + content
+  //   })
+  //   scrollToBottom()
+  // }, 800)
 }
 
 // 清空对话
