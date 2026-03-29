@@ -18,7 +18,7 @@ export class AiController {
   @UseGuards(AuthGuard)
   @Get('chat')
   chat(@Query() query): string {
-    const { info } = query;
-    return this.aiService.chat(info);
+    const { info, sessionId } = query;
+    return this.aiService.chat(info, sessionId);
   }
 }

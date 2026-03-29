@@ -14,7 +14,7 @@ export class AiService {
     return this.aiOperator.searchInfo(info);
   }
 
-  chat(info) {
-    return this.aiOperator.chat(info);
+  chat(info, sessionId?: string) {
+    return this.aiOperator.chat(info, sessionId);
   }
 }
