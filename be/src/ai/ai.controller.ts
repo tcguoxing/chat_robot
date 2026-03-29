@@ -14,4 +14,11 @@ export class AiController {
     const { info } = query;
     return this.aiService.searchInfo(info);
   }
+
+  @UseGuards(AuthGuard)
+  @Get('chat')
+  chat(@Query() query): string {
+    const { info } = query;
+    return this.aiService.chat(info);
+  }
 }

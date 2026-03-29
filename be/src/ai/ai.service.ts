@@ -13,4 +13,8 @@ export class AiService {
   searchInfo(info) {
     return this.aiOperator.searchInfo(info);
   }
+
+  chat(info) {
+    return this.aiOperator.chat(info);
+  }
 }
