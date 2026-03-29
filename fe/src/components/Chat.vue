@@ -2,7 +2,7 @@
   <div class="chat-container">
     <!-- 头部 -->
     <header class="chat-header">
-      <div class="header-title">豆包 AI 助手</div>
+      <div class="header-title"> AI 助手</div>
     </header>
 
     <!-- 消息列表 -->
@@ -45,7 +45,7 @@
             type="textarea"
             role="userInput"
             :autosize="{ minRows: 1, maxRows: 6 }"
-            placeholder="给“豆包”发送消息..."
+            placeholder="给“AI”发送消息..."
             resize="none"
             @keydown.enter.prevent="handleSend"
           />
