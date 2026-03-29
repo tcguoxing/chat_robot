@@ -15,6 +15,24 @@ export default class AiOperator {
     this.kimiAgent = createKimiAgent();
   }
 
+  async chat(messages: Array<{ role: string; content: string }>) {
+    if (!this.kimiAgent) await this.init();
+    if (!this.kimiAgent)
+      return { content: 'Error: Kimi Agent is not available. Please check MOONSHOT_API_KEY.' };
+    const result = await this.kimiAgent.invoke({ messages });
+    let tokenUsage = null;
+    if (result.messages && result.messages.length > 0) {
+      const lastMessage = result.messages[result.messages.length - 1];
+      if (lastMessage.usage_metadata) {
+        tokenUsage = lastMessage.usage_metadata;
+      }
+    }
+    return {
+      content: result.messages[result.messages.length - 1].content,
+      tokenUsage,
+    };
+  }
+
   async searchInfo(askResult = '') {
     log('askResult: ', askResult);
     if (askResult === '' || askResult === null || askResult === undefined) {
