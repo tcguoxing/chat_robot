@@ -26,12 +26,16 @@ export const createKimiAgent = () => {
   // 初始化 Qwen 模型（通过 DashScope 兼容接口）
   const kimiModel = new ChatOpenAI({
     modelName: 'kimi-k2.5', // 实际模型名称请参考 DashScope 文档
-    temperature: 1, // todo ?
+    temperature: 0.6, // todo ?
     configuration: {
       baseURL: process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1',
     },
     apiKey: apiKey,
-    modelKwargs: {},
+    modelKwargs: {
+      thinking: {
+        type: 'disabled'
+      }
+    },
   });
 
   // 定义工具列表

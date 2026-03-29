@@ -105,10 +105,12 @@ const handleSend = () => {
   scrollToBottom()
 
   // 2. 模拟 AI 回复（实际项目中这里会调用接口）
-  askKimi({info: userInput.value}).then(data => {
+  askKimi({info: content}).then(data => {
+    console.log('data: ', data)
+    const responseContent = data.content || ''
     messages.value.push({
       role: 'assistant',
-      content: '这是一个模拟回复。你刚刚说：' + content
+      content: responseContent
     })
     scrollToBottom()
   })
