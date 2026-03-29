@@ -40,25 +40,25 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 获取本地存储的 token
   const token = localStorage.getItem('chatToken')
-  next()
+  // next()
 
   // 如果访问的是登录或注册页
-  // if (to.path === '/' || to.path === '/register') {
-  //   // 如果已有 token，则直接跳转到聊天页（或其他主页）
-  //   if (token) {
-  //     next('/chat')
-  //   } else {
-  //     next()
-  //   }
-  // } else {
-  //   // 访问其他页面，需要验证 token
-  //   if (token) {
-  //     next()
-  //   } else {
-  //     // 没有 token，重定向到登录页
-  //     next('/')
-  //   }
-  // }
+  if (to.path === '/' || to.path === '/register') {
+    // 如果已有 token，则直接跳转到聊天页（或其他主页）
+    if (token) {
+      next('/chat')
+    } else {
+      next()
+    }
+  } else {
+    // 访问其他页面，需要验证 token
+    if (token) {
+      next()
+    } else {
+      // 没有 token，重定向到登录页
+      next('/')
+    }
+  }
 })
 
 export default router

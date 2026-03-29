@@ -17,9 +17,12 @@ export default class AiOperator {
 
   async searchInfo(askResult = '') {
     log('askResult: ', askResult);
+    if (askResult === '' || askResult === null || askResult === undefined) {
+      throw new Error('请输入您的问题内容');
+    }
     if (!this.kimiAgent) await this.init();
     if (!this.kimiAgent)
-      return 'Error: Kimi Agent is not available. Please check ANTHROPIC_API_KEY.';
+      return 'Error: Kimi Agent is not available. Please check MOONSHOT_API_KEY.';
 
     const result = await this.kimiAgent.invoke({
       messages: [{ role: 'user', content: `${askResult}` }],
