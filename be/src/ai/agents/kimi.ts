@@ -81,7 +81,18 @@ export const createChatAgent = async () => {
     client = conn.getClient();
   } else {
     const uri = process.env.MONGODB_URI as string;
-    const tmp = new MongoClient(uri);
+    const username = process.env.user;
+    const password = process.env.pass;
+    const authSource = process.env.authSource || 'admin';
+    const tmp = new MongoClient(
+      uri,
+      username && password
+        ? {
+            auth: { username, password },
+            authSource,
+          }
+        : {},
+    );
     await tmp.connect();
     client = tmp;
   }
