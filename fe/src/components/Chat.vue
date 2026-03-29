@@ -69,7 +69,6 @@ import { ref, nextTick } from 'vue'
 import { Paperclip, Delete, Position, UserFilled } from '@element-plus/icons-vue'
 import {askKimi} from '../api/ai'
 defineOptions({name: 'Chat'})
-console.log('chat component')
 
 interface Message {
   role: 'user' | 'assistant'
@@ -107,12 +106,14 @@ const handleSend = () => {
   // 2. 模拟 AI 回复（实际项目中这里会调用接口）
   askKimi({info: content}).then(data => {
     console.log('data: ', data)
-    const responseContent = data.content || ''
-    messages.value.push({
-      role: 'assistant',
-      content: responseContent
-    })
-    scrollToBottom()
+    if(data.code == 200) {
+      const responseContent = data.data.content || ''
+      messages.value.push({
+        role: 'assistant',
+        content: responseContent
+      })
+      scrollToBottom()
+    }
   })
   // setTimeout(() => {
   //   messages.value.push({

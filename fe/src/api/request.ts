@@ -25,7 +25,7 @@ class Request {
     console.log('import.meta.env.VITE_API_BASE_URL: ', import.meta.env.VITE_API_BASE_URL);
     this.instance = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL || '/dev',
-      timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
+      timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '120000'),
       headers: {
         'Content-Type': 'application/json',
       },
