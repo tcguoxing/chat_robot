@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { Paperclip, Delete, Position, UserFilled } from '@element-plus/icons-vue'
-import {askKimi} from '../api/ai'
+import {askKimi, chatKimi} from '../api/ai'
 defineOptions({name: 'Chat'})
 
 interface Message {
@@ -77,6 +77,7 @@ interface Message {
 
 const chatMainRef = ref<HTMLElement | null>(null)
 const userInput = ref('')
+const sessionId = ref(crypto.randomUUID())
 const messages = ref<Message[]>([
   { role: 'assistant', content: '你好！我是你的 AI 助手，有什么我可以帮你的吗？' }
 ])
@@ -104,7 +105,7 @@ const handleSend = () => {
   scrollToBottom()
 
   // 2. 模拟 AI 回复（实际项目中这里会调用接口）
-  askKimi({info: content}).then(data => {
+  chatKimi({info: content, sessionId: sessionId.value}).then(data => {
     console.log('data: ', data)
     if(data.code == 200) {
       const responseContent = data.data.content || ''
@@ -129,6 +130,8 @@ const clearMessages = () => {
   messages.value = [
     { role: 'assistant', content: '你好！我是你的 AI 助手，有什么我可以帮你的吗？' }
   ]
+  // 清空对话时生成新的 sessionId，代表开启新一轮对话
+  sessionId.value = crypto.randomUUID()
 }
 </script>
 
