@@ -28,8 +28,8 @@ const rules = {
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { 
-      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$/, 
-      message: '密码需包含大小写字母、数字和特殊符号，长度至少8位', 
+      pattern: /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{8,20}$/, 
+      message: '密码需包含字母和数字，长度在8到20位之间', 
       trigger: 'blur' 
     }
   ],
@@ -153,7 +153,7 @@ const goToLogin = () => {
           <el-input
             v-model="registerForm.password"
             type="password"
-            placeholder="请输入密码（包含大小写字母、数字和特殊符号）"
+            placeholder="请输入密码（包含字母和数字，8-20位）"
             prefix-icon="Lock"
             show-password
             size="large"
