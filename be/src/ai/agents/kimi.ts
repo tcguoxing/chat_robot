@@ -6,6 +6,7 @@ import { StateGraph, START, MessagesAnnotation } from '@langchain/langgraph';
 import { MongoDBSaver } from '@langchain/langgraph-checkpoint-mongodb';
 import { MongoClient } from 'mongodb';
 import { AIMessage, HumanMessage, BaseMessage } from '@langchain/core/messages';
+import mongoose from 'mongoose';
 
 export const createKimiAgent = () => {
   // Check for API Key
@@ -74,12 +75,23 @@ export const createChatAgent = async () => {
       },
     },
   });
-  const uri = process.env.MONGODB_URI as string;
-  const client = new MongoClient(uri);
-  await client.connect();
+  let client: MongoClient;
+  const conn: any = mongoose.connection as any;
+  if (conn && typeof conn.getClient === 'function' && conn.readyState === 1) {
+    client = conn.getClient();
+  } else {
+    const uri = process.env.MONGODB_URI as string;
+    const tmp = new MongoClient(uri);
+    await tmp.connect();
+    client = tmp;
+  }
+  const dbName =
+    process.env.DB_NAME ||
+    ((mongoose.connection as any)?.db?.databaseName as string) ||
+    'chat_robot';
   const checkpointer = new MongoDBSaver({
     client,
-    dbName: 'chat_robot',
+    dbName,
     checkpointCollectionName: 'agent_checkpoints',
     checkpointWritesCollectionName: 'agent_checkpoints_writes',
   });

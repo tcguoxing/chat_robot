@@ -20,6 +20,7 @@ import { AiModule } from './ai/ai.module';
       user: String(process.env.user),
       pass: String(process.env.pass),
     }),
+    // 全局速率限制：60 秒内同一 IP 最多 10 次请求
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
