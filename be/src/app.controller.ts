@@ -5,8 +5,9 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  /** 服务信息：单用户模式、内置 admin、LangGraph 节点列表 */
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getInfo() {
+    return this.appService.getInfo();
   }
 }

@@ -1,95 +1,154 @@
-这是一个基于langChain开发的聊天项目。
+# chat_Robot
 
-### 项目结构
-项目分为前端和后端两个主要部分：
-- **be/**：后端服务，基于NestJS框架开发
-- **fe/**：前端应用，基于Vue 3框架开发
+单用户 AI 聊天机器人：**没有登录 / 注册 / 邀请码 / JWT**，打开页面即可对话，系统内置唯一用户 `admin`。模型 API Key 只配置在后端 `.env` 里。
 
-### 技术栈
+后端用 **LangGraph** 编排 agent 循环（`state` / `node` / `edge` / `checkpointing`），LangChain 只保留「模型客户端 + 消息 + 工具定义」这一层。
 
-#### 后端（be）
-- **框架**：NestJS + TypeScript
-- **数据库**：MongoDB
-- **认证**：JWT + Passport
-- **加密**：RSA加密算法
-- **构建工具**：Nest CLI
-- **测试**：Jest
+## 项目结构
 
-#### 前端（fe）
-- **框架**：Vue 3 + TypeScript
-- **UI组件库**：Element Plus
-- **路由**：Vue Router
-- **HTTP客户端**：Axios
-- **加密**：jsencrypt
-- **构建工具**：Vite
-- **agent工具**：langchain
+```
+chat_Robot/
+├── be/                 # 后端：NestJS 11 + LangGraph + MongoDB
+│   └── src/
+│       ├── ai/
+│       │   ├── graph/          # LangGraph 图：state / nodes / edges / checkpointer
+│       │   ├── operator/       # AI 编排门面（调用图、处理附件）
+│       │   ├── model.ts        # ChatOpenAI 构造（唯一入口）
+│       │   └── tools/          # 工具注册表
+│       ├── common/             # 全局响应拦截器 / 异常过滤器
+│       ├── app.module.ts
+│       └── main.ts
+├── fe/                 # 前端：Vue 3 + Element Plus + Vite
+│   └── src/
+│       ├── api/ai.ts           # fetch + FormData 调用 /chat
+│       ├── components/Chat.vue # 唯一的页面：聊天
+│       └── router/             # 只有 /chat
+└── docs/
+```
 
-### 核心功能
+## 技术栈
 
-#### 后端功能
-1. **用户管理**：
-   - 用户注册、登录、信息查询
-   - 密码加密存储
-   - 用户信息管理
+| 层 | 技术 |
+|---|---|
+| 前端 | Vue 3、TypeScript、Element Plus、Vite |
+| 后端 | NestJS 11、TypeScript |
+| Agent 编排 | **LangGraph**（StateGraph / 条件边 / MongoDBSaver checkpoint） |
+| 模型层 | `@langchain/openai`（OpenAI 兼容协议，可指向 DeepSeek / Kimi / Qwen 等） |
+| 工具 | `@langchain/tavily`（可选） |
+| 存储 | MongoDB（只用于 LangGraph 的消息 checkpoint） |
 
-2. **认证授权**：
-   - JWT令牌生成与验证
-   - 基于角色的访问控制
-   - 登录保护中间件
+## 快速开始
 
-3. **加密服务**：
-   - RSA密钥生成
-   - 数据加密解密
-   - 安全传输支持
+### 1. 启动 MongoDB
 
-4. **邀请码系统**：
-   - 邀请码生成
-   - 邀请码验证
+checkpoint 需要 MongoDB（本地或远程均可）：
 
-5. **统一响应处理**：
-   - 全局异常过滤
-   - 响应拦截器
-   - 标准化API响应格式
+```bash
+mongod --dbpath /your/mongo/data --port 27017
+```
 
-#### 前端功能
-1. **用户认证**：
-   - 登录页面
-   - 注册页面
-   - 密码加密传输
+### 2. 配置后端
 
-2. **内容展示**：
-   - 三栏式内容页面
-   - API数据集成
+```bash
+cd be
+cp .env.example .env
+# 必填：MODEL_API_KEY；按需修改 MODEL_BASE_URL / MODEL_NAME / MONGODB_URI
+```
 
-3. **路由管理**：
-   - 页面路由配置
-   - 导航守卫
+### 3. 启动
 
-### 项目特点
-1. **前后端分离架构**：清晰的职责划分，便于团队协作和独立部署
-2. **安全性设计**：
-   - RSA加密传输
-   - JWT认证机制
-   - 密码哈希存储
-3. **模块化设计**：
-   - 后端采用NestJS模块系统
-   - 前端组件化开发
-4. **完整的测试覆盖**：
-   - 单元测试
-   - 集成测试
-   - E2E测试
-5. **开发效率工具**：
-   - 自动格式化
-   - 热重载
-   - 调试支持
+```bash
+# 后端
+cd be && pnpm install && pnpm start:dev
 
-### 开发流程
-- 后端：使用Nest CLI进行开发、构建和测试
-- 前端：使用Vite进行开发、构建和预览
-- 代码质量：ESLint + Prettier保证代码规范
+# 前端（另开终端）
+cd fe && npm install && npm run dev
+```
 
-### 部署
-- 后端：构建为Node.js应用，使用pm2或容器化部署
-- 前端：构建为静态资源，部署到CDN或静态文件服务器
+前端默认访问 `http://localhost:5173`，Vite 把 `/dev` 代理到后端 `http://localhost:3000`。
 
-这个项目实现了一个完整的用户认证和管理系统，具备良好的安全性、可扩展性和可维护性，适合作为企业级应用的基础框架。
+## API
+
+### `POST /chat`
+
+多轮对话（multipart/form-data），同一个 `sessionId` 复用同一个 LangGraph `thread_id`，历史由 MongoDB checkpoint 保存。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `info` | string | 用户输入 |
+| `sessionId` | string | 会话 id（前端用 `crypto.randomUUID()` 生成） |
+| `files` | file[] | 可选，图片或纯文本（txt/md/csv/json 等），单文件 ≤ 10MB，最多 50 个 |
+
+响应（全局统一包装）：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "content": "回答内容",
+    "steps": 2,
+    "toolCalls": 1,
+    "threadId": "会话 id",
+    "user": { "id": "admin", "username": "admin", "role": "admin" },
+    "tokenUsage": null
+  }
+}
+```
+
+### `GET /search?info=...`
+
+单轮问答，不写会话记忆（内部使用一次性的 thread_id）。
+
+### `GET /`
+
+服务信息：单用户模式、内置 admin、图节点列表。
+
+## LangGraph 图
+
+```
+        START
+          │
+          ▼
+       prepare            复位运行时状态（admin / 计数器 / 步数上限）
+          │
+          ▼
+        agent ◀──────────────┐
+          │                  │
+          ├── 有 tool_calls ─▶ tools     执行工具，ToolMessage 回灌
+          │                  │
+          ├── 达到步数上限 ──▶ limit ──▶ END
+          │
+          └── 无工具调用 ────▶ END
+```
+
+| 概念 | 在项目中的位置 |
+|---|---|
+| **State** | `be/src/ai/graph/state.ts`：`messages`、`user`(admin)、`stepCount`、`toolCallCount`、`maxSteps` |
+| **Node** | `be/src/ai/graph/nodes.ts`：`prepare`、`agent`、`tools`、`limit` |
+| **Edge** | `be/src/ai/graph/edges.ts`：`routeAfterAgent` 条件边 + 固定边 |
+| **Checkpointing** | `be/src/ai/graph/checkpointer.ts`：`MongoDBSaver`，collection 为 `agent_checkpoints` / `agent_checkpoints_writes` |
+
+## 环境变量（be/.env）
+
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `MODEL_API_KEY` | ✅ | 模型 API Key（唯一需要用户提供的凭证） |
+| `MODEL_BASE_URL` | ❌ | OpenAI 兼容接口地址，默认 `https://api.deepseek.com` |
+| `MODEL_NAME` | ❌ | 模型名 |
+| `MODEL_TEMPERATURE` | ❌ | 温度，默认 `0.6` |
+| `MODEL_DISABLE_THINKING` | ❌ | 设为 `true` 时发送 `thinking: disabled`（Kimi/Qwen 等） |
+| `AGENT_MAX_STEPS` | ❌ | 单轮最大推理步数，默认 `8` |
+| `TAVILY_API_KEY` | ❌ | 不配置则不注册搜索工具 |
+| `MONGODB_URI` | ✅ | MongoDB 连接串（checkpoint 用） |
+| `DB_NAME` | ❌ | checkpoint 库名 |
+| `PORT` | ❌ | 后端端口，默认 `3000` |
+
+## 测试
+
+```bash
+cd be && pnpm test        # 单元测试：图循环、checkpoint 记忆、步数上限、附件解析
+cd fe && npm run build    # vue-tsc + vite build
+```
+
+> `pnpm test:e2e` 需要可用的 MongoDB（LangGraph checkpoint 依赖）。

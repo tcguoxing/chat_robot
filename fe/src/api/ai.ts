@@ -1,12 +1,28 @@
-// ask ai
-import router from '../router';
-import request from './request';
-import type { ApiResponse } from './request';
-
 /** 后端 /chat 返回的数据结构 */
+export interface ChatUser {
+  id: string;
+  username: string;
+  role: 'admin';
+}
+
 export interface ChatResponseData {
   content: string;
   tokenUsage?: Record<string, unknown> | null;
+  /** 本次运行模型推理步数 */
+  steps?: number;
+  /** 本次运行工具调用次数 */
+  toolCalls?: number;
+  /** 会话 id（后端 LangGraph checkpoint 的 thread_id） */
+  threadId?: string;
+  /** 单用户模式下固定的 admin 用户 */
+  user?: ChatUser;
+}
+
+/** 后端统一响应格式 */
+export interface ChatApiResponse {
+  code: number;
+  message: string;
+  data: ChatResponseData;
 }
 
 /** 对话请求参数 */
@@ -18,10 +34,6 @@ export interface ChatParams {
 
 const getBaseUrl = (): string => import.meta.env.VITE_API_BASE_URL || '/dev';
 
-export const askKimi = async function (params: { info: string }) {
-  return await request.get('/search', params);
-};
-
 /**
  * 调用 AI 对话接口
  *
@@ -32,7 +44,7 @@ export const askKimi = async function (params: { info: string }) {
  */
 export const chatKimi = async function (
   params: ChatParams,
-): Promise<ApiResponse<ChatResponseData>> {
+): Promise<ChatApiResponse> {
   const formData = new FormData();
   formData.append('info', params.info ?? '');
   formData.append('sessionId', params.sessionId ?? '');
@@ -41,23 +53,14 @@ export const chatKimi = async function (
     formData.append('files', file, file.name);
   }
 
-  const token = localStorage.getItem('chatToken');
   const response = await fetch(`${getBaseUrl()}/chat`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: formData,
   });
 
-  // 未授权：清理本地 token 并回到登录页（与 axios 拦截器行为保持一致）
-  if (response.status === 401) {
-    localStorage.removeItem('chatToken');
-    router.replace('/');
-    throw new Error('登录已过期，请重新登录');
-  }
-
-  let payload: ApiResponse<ChatResponseData> | null = null;
+  let payload: ChatApiResponse | null = null;
   try {
-    payload = (await response.json()) as ApiResponse<ChatResponseData>;
+    payload = (await response.json()) as ChatApiResponse;
   } catch {
     payload = null;
   }

@@ -1,8 +1,9 @@
 <template>
   <div class="chat-container">
-    <!-- 头部 -->
+    <!-- 头部：单用户模式，内置 admin，无登录 -->
     <header class="chat-header">
-      <div class="header-title"> AI 助手</div>
+      <div class="header-title">AI 助手</div>
+      <div class="header-meta">单用户模式 · admin</div>
     </header>
 
     <!-- 消息列表 -->
@@ -22,6 +23,7 @@
           
           <div class="message-content">
             <div class="message-bubble">{{ msg.content }}</div>
+            <div v-if="msg.meta" class="message-meta">{{ msg.meta }}</div>
           </div>
         </div>
       </div>
@@ -102,6 +104,8 @@ defineOptions({name: 'Chat'})
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  /** 图执行信息，比如推理步数 / 工具调用次数 */
+  meta?: string
 }
 
 const MAX_FILES = 50
@@ -142,6 +146,14 @@ const formatContent = (content: unknown): string => {
 const getExtension = (name: string) => {
   const index = name.lastIndexOf('.')
   return index === -1 ? '' : name.slice(index).toLowerCase()
+}
+
+// 把 LangGraph 的执行信息展示出来：推理步数 / 工具调用次数
+const buildGraphMeta = (data: { steps?: number; toolCalls?: number }): string => {
+  const parts: string[] = []
+  if (data.steps) parts.push(`${data.steps} 步推理`)
+  if (data.toolCalls) parts.push(`调用工具 ${data.toolCalls} 次`)
+  return parts.join(' · ')
 }
 
 const isSupportedFile = (file: File) => {
@@ -217,6 +229,7 @@ const handleSend = async () => {
     const data = await chatKimi({ info: text, sessionId: sessionId.value, files })
     if (data.code === 200 && data.data) {
       assistantMessage.content = formatContent(data.data.content) || '（空回复）'
+      assistantMessage.meta = buildGraphMeta(data.data) || undefined
     } else {
       assistantMessage.content = `抱歉，本次回复失败：${data.message || '未知错误'}`
     }
@@ -251,6 +264,7 @@ const clearMessages = () => {
 }
 
 .chat-header {
+  position: relative;
   height: 60px;
   display: flex;
   align-items: center;
@@ -265,6 +279,18 @@ const clearMessages = () => {
     font-size: 16px;
     font-weight: 600;
     color: #1d2129;
+  }
+
+  .header-meta {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #86909c;
+    background: #f2f3f5;
+    border-radius: 10px;
+    padding: 2px 10px;
   }
 }
 
@@ -324,6 +350,12 @@ const clearMessages = () => {
     word-break: break-word;
     white-space: pre-wrap;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .message-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #86909c;
   }
 }
 

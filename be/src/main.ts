@@ -4,7 +4,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/filters/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -12,15 +11,6 @@ async function bootstrap() {
 
   // 启用CORS
   app.enableCors();
-
-  // 全局验证管道
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
 
   // 全局响应拦截器
   app.useGlobalInterceptors(new ResponseInterceptor());
@@ -30,10 +20,11 @@ async function bootstrap() {
 
   // Swagger文档配置
   const config = new DocumentBuilder()
-    .setTitle('用户管理系统API')
-    .setDescription('用户管理系统的API文档')
+    .setTitle('AI 聊天机器人 API')
+    .setDescription(
+      '单用户（admin）AI 聊天服务，无登录鉴权；agent 循环由 LangGraph 编排',
+    )
     .setVersion('1.0')
-    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
