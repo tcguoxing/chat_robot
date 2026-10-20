@@ -9,36 +9,45 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('UserService', () => {
   let userService: UserService;
-  let authService: AuthService;
-  let inviteCodeService: InviteCodeService;
-  let cryptoService: CryptoService;
+
+  let userModelMock: any;
+  let authServiceMock: any;
+  let inviteCodeServiceMock: any;
+  let cryptoServiceMock: any;
 
   beforeEach(async () => {
+    // UserService 内部用 `new this.userModel(...)` 创建文档，
+    // 因此模型既要是可构造的函数，也要带上静态方法。
+    userModelMock = jest.fn();
+    userModelMock.findOne = jest.fn();
+    userModelMock.find = jest.fn();
+    userModelMock.findById = jest.fn();
+    userModelMock.findByIdAndUpdate = jest.fn();
+    userModelMock.findByIdAndDelete = jest.fn();
+
+    authServiceMock = {
+      hashPassword: jest.fn(),
+      generateToken: jest.fn(),
+    };
+    inviteCodeServiceMock = {
+      validateInviteCode: jest.fn(),
+      useInviteCode: jest.fn(),
+    };
+    cryptoServiceMock = {
+      decrypt: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
-        AuthService,
-        InviteCodeService,
-        CryptoService,
-        {
-          provide: getModelToken(User.name),
-          useValue: {
-            findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            find: jest.fn(),
-            findById: jest.fn(),
-            findByIdAndUpdate: jest.fn(),
-            findByIdAndDelete: jest.fn(),
-          },
-        },
+        { provide: getModelToken(User.name), useValue: userModelMock },
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: InviteCodeService, useValue: inviteCodeServiceMock },
+        { provide: CryptoService, useValue: cryptoServiceMock },
       ],
     }).compile();
 
     userService = module.get<UserService>(UserService);
-    authService = module.get<AuthService>(AuthService);
-    inviteCodeService = module.get<InviteCodeService>(InviteCodeService);
-    cryptoService = module.get<CryptoService>(CryptoService);
   });
 
   it('should be defined', () => {
@@ -47,23 +56,17 @@ describe('UserService', () => {
 
   describe('register', () => {
     it('should throw conflict exception if username exists', async () => {
-      // 模拟邀请码验证通过
-      jest
-        .spyOn(inviteCodeService, 'validateInviteCode')
-        .mockResolvedValueOnce({} as any);
+      inviteCodeServiceMock.validateInviteCode.mockResolvedValueOnce({});
 
-      // 模拟用户已存在
-      jest.spyOn(userService['userModel'], 'findOne').mockResolvedValueOnce({
-        username: 'testuser',
-        email: 'test@example.com',
-        phone: '13800138000',
+      userModelMock.findOne.mockReturnValueOnce({
+        exec: jest
+          .fn()
+          .mockResolvedValueOnce({ _id: '1', username: 'testuser' }),
       } as any);
 
       await expect(
         userService.register({
           username: 'testuser',
-          email: 'new@example.com',
-          phone: '13900139000',
           password: 'encrypted-password',
           inviteCode: 'TESTINVITECODE1234',
         }),
@@ -71,62 +74,50 @@ describe('UserService', () => {
     });
 
     it('should successfully register a user with valid invite code', async () => {
-      // 模拟邀请码验证通过
-      jest
-        .spyOn(inviteCodeService, 'validateInviteCode')
-        .mockResolvedValueOnce({} as any);
+      inviteCodeServiceMock.validateInviteCode.mockResolvedValueOnce({});
 
-      // 模拟用户不存在
-      jest
-        .spyOn(userService['userModel'], 'findOne')
-        .mockResolvedValueOnce(null);
+      userModelMock.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValueOnce(null),
+      } as any);
 
-      // 模拟RSA解密
-      jest.spyOn(cryptoService, 'decrypt').mockReturnValueOnce('password123');
+      cryptoServiceMock.decrypt.mockReturnValueOnce('password123');
+      authServiceMock.hashPassword.mockResolvedValueOnce('hashedPassword');
 
-      // 模拟密码加密
-      jest
-        .spyOn(authService, 'hashPassword')
-        .mockResolvedValueOnce('hashedPassword');
-
-      // 模拟用户创建和保存
-      const mockUser = {
+      const savedUser = {
+        _id: '123456',
         username: 'testuser',
-        email: 'test@example.com',
-        phone: '13800138000',
         password: 'hashedPassword',
-        save: jest.fn().mockResolvedValueOnce({
-          _id: '123456',
-          username: 'testuser',
-          email: 'test@example.com',
-          phone: '13800138000',
-        } as any),
       };
-      jest
-        .spyOn(userService['userModel'], 'create')
-        .mockReturnValueOnce(mockUser as any);
+      const save = jest.fn().mockResolvedValueOnce(savedUser);
+      userModelMock.mockImplementationOnce(() => ({ save }));
 
-      // 模拟邀请码使用
-      jest.spyOn(inviteCodeService, 'useInviteCode').mockResolvedValueOnce();
+      inviteCodeServiceMock.useInviteCode.mockResolvedValueOnce(undefined);
 
       const result = await userService.register({
         username: 'testuser',
-        email: 'test@example.com',
-        phone: '13800138000',
         password: 'encrypted-password',
         inviteCode: 'TESTINVITECODE1234',
       });
 
-      expect(result).toBeDefined();
+      expect(cryptoServiceMock.decrypt).toHaveBeenCalledWith(
+        'encrypted-password',
+      );
+      expect(authServiceMock.hashPassword).toHaveBeenCalledWith('password123');
+      expect(save).toHaveBeenCalled();
+      expect(inviteCodeServiceMock.useInviteCode).toHaveBeenCalledWith(
+        'TESTINVITECODE1234',
+        '123456',
+      );
+      expect(result).toBe(savedUser);
       expect(result.username).toBe('testuser');
     });
   });
 
   describe('findById', () => {
     it('should throw not found exception if user does not exist', async () => {
-      jest
-        .spyOn(userService['userModel'], 'findById')
-        .mockResolvedValueOnce(null);
+      userModelMock.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValueOnce(null),
+      } as any);
 
       await expect(userService.findById('123')).rejects.toThrow(
         NotFoundException,
@@ -137,15 +128,14 @@ describe('UserService', () => {
       const mockUser = {
         _id: '123',
         username: 'testuser',
-        email: 'test@example.com',
       };
-      jest
-        .spyOn(userService['userModel'], 'findById')
-        .mockResolvedValueOnce(mockUser as any);
+      userModelMock.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValueOnce(mockUser),
+      } as any);
 
       const result = await userService.findById('123');
 
-      expect(result).toBeDefined();
+      expect(result).toBe(mockUser);
       expect(result.username).toBe('testuser');
     });
   });

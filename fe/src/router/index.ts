@@ -37,7 +37,7 @@ const router = createRouter({
 })
 
 // 全局前置路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // 获取本地存储的 token
   const token = localStorage.getItem('chatToken')
   // next()

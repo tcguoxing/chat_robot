@@ -48,8 +48,8 @@ export class AuthService {
     }
 
     // 2. 解密RSA加密的密码
+    // 注意：不要把解密后的明文密码写入日志
     const password = this.cryptoService.decrypt(encryptedPassword);
-    console.log(`52 Decrypted password: ${password}`);
 
     // 3. 比较密码（bcrypt验证）
     const isPasswordValid = await bcrypt.compare(password, user.password);

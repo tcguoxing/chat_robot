@@ -17,7 +17,7 @@
             <el-avatar :size="36" src="https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/doubao_logo_1.png">AI</el-avatar>
           </div>
           <div class="avatar" v-else>
-            <el-avatar :size="36" icon="UserFilled"></el-avatar>
+            <el-avatar :size="36" :icon="UserFilled"></el-avatar>
           </div>
           
           <div class="message-content">
@@ -32,12 +32,39 @@
       <div class="input-wrapper">
         <!-- 工具栏 -->
         <div class="toolbar" row-flex>
-          <el-tooltip content="最多 50 个文件。支持 pdf, txt, csv, docx, xlsx, pptx, md 等" placement="top">
-            <el-button text :icon="Paperclip" class="tool-btn">附件</el-button>
+          <input
+            ref="fileInputRef"
+            class="file-input"
+            type="file"
+            multiple
+            :accept="ACCEPT"
+            @change="handleFileChange"
+          />
+          <el-tooltip
+            content="支持图片与纯文本（txt/md/csv/json 等），单个不超过 10MB，最多 50 个"
+            placement="top"
+          >
+            <el-button text :icon="Paperclip" class="tool-btn" @click="triggerFilePick">
+              附件
+            </el-button>
           </el-tooltip>
           <el-button text :icon="Delete" class="tool-btn" @click="clearMessages">清空对话</el-button>
         </div>
-        
+
+        <!-- 已选附件 -->
+        <div v-if="attachedFiles.length" class="attachment-list">
+          <el-tag
+            v-for="(file, index) in attachedFiles"
+            :key="`${file.name}-${index}`"
+            type="info"
+            size="small"
+            closable
+            @close="removeFile(index)"
+          >
+            {{ file.name }}
+          </el-tag>
+        </div>
+
         <!-- 输入框 -->
         <div class="input-box">
           <el-input
@@ -53,7 +80,8 @@
             type="primary" 
             class="send-btn" 
             :icon="Position" 
-            :disabled="!userInput.trim()"
+            :disabled="sending || (!userInput.trim() && attachedFiles.length === 0)"
+            :loading="sending"
             @click="handleSend"
             circle
           ></el-button>
@@ -67,7 +95,8 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { Paperclip, Delete, Position, UserFilled } from '@element-plus/icons-vue'
-import {askKimi, chatKimi} from '../api/ai'
+import { ElMessage } from 'element-plus'
+import { chatKimi } from '../api/ai'
 defineOptions({name: 'Chat'})
 
 interface Message {
@@ -75,9 +104,18 @@ interface Message {
   content: string
 }
 
+const MAX_FILES = 50
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']
+const TEXT_EXTENSIONS = ['.txt', '.md', '.markdown', '.csv', '.json', '.log', '.yml', '.yaml']
+const ACCEPT = [...IMAGE_EXTENSIONS, ...TEXT_EXTENSIONS].join(',')
+
 const chatMainRef = ref<HTMLElement | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const userInput = ref('')
 const sessionId = ref(crypto.randomUUID())
+const sending = ref(false)
+const attachedFiles = ref<File[]>([])
 const messages = ref<Message[]>([
   { role: 'assistant', content: '你好！我是你的 AI 助手，有什么我可以帮你的吗？' }
 ])
@@ -90,48 +128,116 @@ const scrollToBottom = async () => {
   }
 }
 
-// 发送消息
-const handleSend = () => {
-  const content = userInput.value.trim()
-  if (!content) return
-  
-  // 1. 添加用户消息
-  messages.value.push({
-    role: 'user',
-    content
-  })
-  
-  userInput.value = ''
-  scrollToBottom()
+// 后端返回的 content 可能是字符串，也可能是多模态的数组
+const formatContent = (content: unknown): string => {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => (typeof part === 'string' ? part : part?.text ?? ''))
+      .join('')
+  }
+  return content == null ? '' : String(content)
+}
 
-  // 2. 模拟 AI 回复（实际项目中这里会调用接口）
-  chatKimi({info: content, sessionId: sessionId.value}).then(data => {
-    console.log('data: ', data)
-    if(data.code == 200) {
-      const responseContent = data.data.content || ''
-      messages.value.push({
-        role: 'assistant',
-        content: responseContent
-      })
-      scrollToBottom()
+const getExtension = (name: string) => {
+  const index = name.lastIndexOf('.')
+  return index === -1 ? '' : name.slice(index).toLowerCase()
+}
+
+const isSupportedFile = (file: File) => {
+  const ext = getExtension(file.name)
+  return IMAGE_EXTENSIONS.includes(ext) || TEXT_EXTENSIONS.includes(ext)
+}
+
+const triggerFilePick = () => {
+  fileInputRef.value?.click()
+}
+
+const removeFile = (index: number) => {
+  attachedFiles.value.splice(index, 1)
+}
+
+const handleFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+
+  for (const file of files) {
+    if (attachedFiles.value.length >= MAX_FILES) {
+      ElMessage.warning(`最多只能上传 ${MAX_FILES} 个文件`)
+      break
     }
-  })
-  // setTimeout(() => {
-  //   messages.value.push({
-  //     role: 'assistant',
-  //     content: '这是一个模拟回复。你刚刚说：' + content
-  //   })
-  //   scrollToBottom()
-  // }, 800)
+    if (!isSupportedFile(file)) {
+      ElMessage.warning(`不支持的文件类型：${file.name}（仅支持图片与纯文本）`)
+      continue
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      ElMessage.warning(`文件 ${file.name} 超过 10MB，已跳过`)
+      continue
+    }
+    const duplicated = attachedFiles.value.some(
+      (item) => item.name === file.name && item.size === file.size,
+    )
+    if (duplicated) {
+      ElMessage.warning(`文件 ${file.name} 已添加`)
+      continue
+    }
+    attachedFiles.value.push(file)
+  }
+
+  // 清空 input，保证同一个文件可以被再次选择
+  input.value = ''
+}
+
+// 发送消息
+const handleSend = async () => {
+  if (sending.value) return
+
+  const text = userInput.value.trim()
+  const files = [...attachedFiles.value]
+  if (!text && files.length === 0) return
+
+  // 1. 添加用户消息（附件以文件名形式展示在气泡里）
+  const displayParts: string[] = []
+  if (text) displayParts.push(text)
+  if (files.length) displayParts.push(files.map((file) => `📎 ${file.name}`).join('\n'))
+  messages.value.push({ role: 'user', content: displayParts.join('\n') })
+
+  userInput.value = ''
+  attachedFiles.value = []
+  sending.value = true
+  await scrollToBottom()
+
+  // 2. 调用后端 POST /chat（multipart/form-data）
+  const assistantIndex = messages.value.push({ role: 'assistant', content: '正在思考…' }) - 1
+  // 通过数组下标取到的是响应式代理，直接改它的 content 就能触发视图更新
+  const assistantMessage = messages.value[assistantIndex]!
+  await scrollToBottom()
+
+  try {
+    const data = await chatKimi({ info: text, sessionId: sessionId.value, files })
+    if (data.code === 200 && data.data) {
+      assistantMessage.content = formatContent(data.data.content) || '（空回复）'
+    } else {
+      assistantMessage.content = `抱歉，本次回复失败：${data.message || '未知错误'}`
+    }
+  } catch (error: any) {
+    // 网络/业务错误在气泡里给出可读提示，避免只弹一个 toast 却留下空白回复
+    assistantMessage.content = `抱歉，本次回复失败：${error?.message || '请稍后重试'}`
+  } finally {
+    sending.value = false
+    await scrollToBottom()
+  }
 }
 
 // 清空对话
 const clearMessages = () => {
+  if (sending.value) return
   messages.value = [
     { role: 'assistant', content: '你好！我是你的 AI 助手，有什么我可以帮你的吗？' }
   ]
   // 清空对话时生成新的 sessionId，代表开启新一轮对话
   sessionId.value = crypto.randomUUID()
+  attachedFiles.value = []
 }
 </script>
 
@@ -246,6 +352,10 @@ const clearMessages = () => {
     display: flex;
     gap: 8px;
     margin-bottom: 8px;
+
+    .file-input {
+      display: none;
+    }
     
     .tool-btn {
       padding: 4px 8px;
@@ -256,6 +366,17 @@ const clearMessages = () => {
         color: #165dff;
         background-color: #f2f3f5;
       }
+    }
+  }
+
+  .attachment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+
+    .el-tag {
+      max-width: 220px;
     }
   }
   

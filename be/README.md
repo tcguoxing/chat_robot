@@ -36,7 +36,7 @@
 
 ```bash
 git clone <repository-url>
-cd solo_test_backend
+cd chat_robot_backend
 ```
 
 ### 2. 安装依赖

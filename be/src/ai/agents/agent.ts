@@ -8,32 +8,32 @@ import { MongoClient } from 'mongodb';
 import { AIMessage, HumanMessage, BaseMessage } from '@langchain/core/messages';
 import mongoose from 'mongoose';
 
-export const createKimiAgent = () => {
+export const createAIAgent = () => {
   // Check for API Key
   // User mentioned DASHSCOPE_API_KEY is required for Qwen usually.
-  const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.MODEL_API_KEY || process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     console.warn(
-      'MOONSHOT_API_KEY (or OPENAI_API_KEY) is missing. Kimi agent will be disabled.',
+      'MODEL_API_KEY (or OPENAI_API_KEY) is missing. AI agent will be disabled.',
     );
     return {
       invoke: async () => ({
         messages: [
-          { content: 'Error: Missing MOONSHOT_API_KEY for Kimi Agent.' },
+          { content: 'Error: Missing MODEL_API_KEY for AI Agent.' },
         ],
       }),
     };
   }
 
-  // console.log('You are using kimi agent.')
+  // console.log('You are using AI agent.')
 
   // 初始化 Qwen 模型（通过 DashScope 兼容接口）
-  const kimiModel = new ChatOpenAI({
-    modelName: 'kimi-k2.5', // 实际模型名称请参考 DashScope 文档
-    temperature: 0.6, // todo ?
+  const AIModel = new ChatOpenAI({
+    modelName: process.env.MODEL_NAME, // 实际模型名称请参考 DashScope 文档
+    temperature: Number(process.env.MODEL_TEMPERATURE), // todo ?
     configuration: {
-      baseURL: process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1',
+      baseURL: process.env.MODEL_BASE_URL,
     },
     apiKey: apiKey,
     modelKwargs: {
@@ -48,25 +48,25 @@ export const createKimiAgent = () => {
 
   // 创建 Agent
   return createAgent({
-    model: kimiModel,
+    model: AIModel,
     tools,
   });
 };
 
 export const createChatAgent = async () => {
-  const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.MODEL_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return {
       invoke: async () => ({
-        messages: [{ content: 'Error: Missing MOONSHOT_API_KEY for Kimi Agent.' }],
+        messages: [{ content: 'Error: Missing MODEL_API_KEY for AI Agent.' }],
       }),
     };
   }
-  const kimiModel = new ChatOpenAI({
-    modelName: 'kimi-k2.5',
+  const AIModel = new ChatOpenAI({
+    modelName: process.env.MODEL_NAME,
     temperature: 0.6,
     configuration: {
-      baseURL: process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1',
+      baseURL: process.env.MODEL_BASE_URL || 'https://api.moonshot.cn/v1',
     },
     apiKey: apiKey,
     modelKwargs: {
@@ -115,7 +115,7 @@ export const createChatAgent = async () => {
   };
   const workflow = new StateGraph(MessagesAnnotation)
     .addNode('agent', async (state) => {
-      const response = await kimiModel.invoke(toBaseMessages(state.messages as any[]));
+      const response = await AIModel.invoke(toBaseMessages(state.messages as any[]));
       return { messages: [response] };
     })
     .addEdge(START, 'agent');

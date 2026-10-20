@@ -14,7 +14,7 @@ export class AiService {
     return this.aiOperator.searchInfo(info);
   }
 
-  chat(info, sessionId?: string) {
-    return this.aiOperator.chat(info, sessionId);
+  chat(info: string, sessionId?: string, files?: Array<Express.Multer.File>) {
+    return this.aiOperator.chat(info, sessionId, files);
   }
 }

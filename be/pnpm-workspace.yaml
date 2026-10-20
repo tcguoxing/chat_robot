@@ -1,0 +1,4 @@
+allowBuilds:
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  unrs-resolver: false

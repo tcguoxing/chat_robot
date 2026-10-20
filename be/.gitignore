@@ -4,6 +4,7 @@ node_modules/
 # Environment variables
 .env
 
+
 # Build output
 dist/
 build/
@@ -14,6 +15,7 @@ logs/
 
 # Editor/IDE
 .vscode/
+.trae/
 .idea/
 *.suo
 *.ntvs*

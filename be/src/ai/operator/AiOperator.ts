@@ -1,20 +1,26 @@
 import dotenv from 'dotenv';
-import { log } from 'console';
-import { createKimiAgent, createChatAgent } from '../agents/kimi';
+import { BadGatewayException, BadRequestException } from '@nestjs/common';
+import { createAIAgent, createChatAgent } from '../agents/agent';
+import { buildAttachmentContent, extractTextContent } from './attachments';
 
 dotenv.config();
 
+const toErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error);
+};
+
 export default class AiOperator {
-  private kimiAgent: any;
+  private AIAgent: any;
   private chatAgent: any;
 
   constructor() {
-    this.kimiAgent = null;
+    this.AIAgent = null;
     this.chatAgent = null;
   }
 
   async init() {
-    this.kimiAgent = createKimiAgent();
+    this.AIAgent = createAIAgent();
   }
 
   private async initChat() {
@@ -24,58 +30,76 @@ export default class AiOperator {
   }
 
   async searchInfo(askResult = '') {
-    log('askResult: ', askResult);
     if (askResult === '' || askResult === null || askResult === undefined) {
-      throw new Error('请输入您的问题内容');
+      throw new BadRequestException('请输入您的问题内容');
     }
-    if (!this.kimiAgent) await this.init();
-    if (!this.kimiAgent)
-      return 'Error: Kimi Agent is not available. Please check MOONSHOT_API_KEY.';
+    if (!this.AIAgent) await this.init();
+    if (!this.AIAgent)
+      return 'Error: AI Agent is not available. Please check MODEL_API_KEY.';
 
-    const result = await this.kimiAgent.invoke({
-      messages: [{ role: 'user', content: `${askResult}` }],
-    });
-
-    // 从最后一个消息的元数据中提取 token 使用情况（如果是 AIMessage）
-    let tokenUsage = null;
-    if (result.messages && result.messages.length > 0) {
-      const lastMessage = result.messages[result.messages.length - 1];
-      if (lastMessage.usage_metadata) {
-        tokenUsage = lastMessage.usage_metadata;
-      }
+    let result: any;
+    try {
+      result = await this.AIAgent.invoke({
+        messages: [{ role: 'user', content: `${askResult}` }],
+      });
+    } catch (error) {
+      throw new BadGatewayException(`AI 服务调用失败：${toErrorMessage(error)}`);
     }
+
+    const messages: any[] = result?.messages ?? [];
+    const lastMessage = messages[messages.length - 1];
 
     return {
-      content: result.messages[result.messages.length - 1].content,
-      tokenUsage: tokenUsage,
+      content: extractTextContent(lastMessage?.content),
+      tokenUsage: lastMessage?.usage_metadata ?? null,
     };
   }
 
-  async chat(askResult = '', sessionId = 'default') {
-    log('askResult: ', askResult);
-    if (askResult === '' || askResult === null || askResult === undefined) {
-      throw new Error('请输入您的问题内容');
+  async chat(
+    askResult = '',
+    sessionId = 'default',
+    files: Array<Express.Multer.File> = [],
+  ) {
+    const question = (askResult ?? '').trim();
+
+    if (!question && (!files || files.length === 0)) {
+      throw new BadRequestException('请输入您的问题内容或上传文件');
     }
+
+    // 先把附件转换成模型可消费的内容；不支持的格式在这里直接返回 400，
+    // 避免把整个请求带到模型侧才报错。
+    const { textContent, imageParts } = buildAttachmentContent(files ?? []);
+
     await this.initChat();
     if (!this.chatAgent)
-      return 'Error: Kimi Agent is not available. Please check MOONSHOT_API_KEY.';
+      return 'Error: AI Agent is not available. Please check MODEL_API_KEY.';
 
-    const result = await this.chatAgent.invoke(
-      { messages: [{ role: 'user', content: `${askResult}` }] },
-      { configurable: { thread_id: sessionId } },
-    );
+    // 纯文本直接作为字符串 content；带图片时使用 OpenAI 兼容的多模态数组
+    const combinedText = [question, textContent].filter(Boolean).join('\n\n');
+    const content: any =
+      imageParts.length === 0
+        ? combinedText
+        : [
+            { type: 'text', text: combinedText || '请描述这些图片的内容' },
+            ...imageParts,
+          ];
 
-    let tokenUsage = null;
-    if ((result as any).messages && (result as any).messages.length > 0) {
-      const lastMessage = (result as any).messages[(result as any).messages.length - 1];
-      if (lastMessage.usage_metadata) {
-        tokenUsage = lastMessage.usage_metadata;
-      }
+    let result: any;
+    try {
+      result = await this.chatAgent.invoke(
+        { messages: [{ role: 'user', content }] },
+        { configurable: { thread_id: sessionId } },
+      );
+    } catch (error) {
+      throw new BadGatewayException(`AI 服务调用失败：${toErrorMessage(error)}`);
     }
 
+    const messages: any[] = result?.messages ?? [];
+    const lastMessage = messages[messages.length - 1];
+
     return {
-      content: (result as any).messages[(result as any).messages.length - 1].content,
-      tokenUsage: tokenUsage,
+      content: extractTextContent(lastMessage?.content),
+      tokenUsage: lastMessage?.usage_metadata ?? null,
     };
   }
 }

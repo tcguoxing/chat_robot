@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, CancelTokenSource, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { ElMessage } from 'element-plus';
+import router from '../router';
 
 // 定义API响应类型
 export interface ApiResponse<T = any> {
@@ -107,7 +108,9 @@ class Request {
               break;
             case 401:
               errorMessage = '未授权，请重新登录';
-              // 可以在这里添加跳转到登录页的逻辑
+              // 清除 token 并跳转到登录页
+              localStorage.removeItem('chatToken');
+              router.replace('/');
               break;
             case 403:
               errorMessage = '拒绝访问';
@@ -208,7 +211,9 @@ class Request {
   public upload<T = any>(url: string, file: File, config?: RequestConfig): Promise<ApiResponse<T>> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
+    // 注意：axios 1.x 的 post 默认会补 x-www-form-urlencoded，
+    // 上传文件场景建议直接用 fetch + FormData（见 api/ai.ts）。
     return this.instance.post(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

@@ -60,10 +60,13 @@ export class CryptoService {
    * 设置密钥轮换定时器
    */
   private setupKeyRotation(): void {
-    setInterval(() => {
+    const timer = setInterval(() => {
       this.logger.log('Scheduled RSA key pair rotation...');
       this.generateKeyPair();
     }, this.KEY_ROTATION_INTERVAL);
+
+    // 不要让定时器阻止进程退出（脚本、单元测试、优雅关闭时很重要）
+    timer.unref?.();
   }
 
   /**

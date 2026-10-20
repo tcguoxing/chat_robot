@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CryptoService } from './crypto.service';
 
 // Mock crypto module for testing
+// 注意：必须保留真实模块的其他导出（尤其是 constants），
+// 否则 Service 里访问 crypto.constants.RSA_PKCS1_OAEP_PADDING 会变成 undefined。
 jest.mock('crypto', () => ({
+  ...jest.requireActual('crypto'),
   generateKeyPairSync: jest.fn(() => ({
     publicKey: 'mock-public-key',
     privateKey: 'mock-private-key',
