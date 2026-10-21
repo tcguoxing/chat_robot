@@ -2,3 +2,10 @@
 .env
 .env.*
 !.env.example
+
+# 操作系统生成文件
+.DS_Store
+Thumbs.db
+
+# 本地包管理器缓存
+.pnpm-store/

@@ -15,8 +15,15 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('返回单用户模式与 admin 角色信息', () => {
+      const info = appController.getInfo();
+
+      expect(info.mode).toBe('single-user');
+      expect(info.user.role).toBe('admin');
+      expect(info.graph.framework).toBe('langgraph');
+      expect(info.graph.nodes).toEqual(
+        expect.arrayContaining(['agent', 'tools']),
+      );
     });
   });
 });
