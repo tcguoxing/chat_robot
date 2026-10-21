@@ -1,4 +1,4 @@
-import { AIMessage, BaseMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessage, BaseMessage, SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { ADMIN_USER, AgentState, AgentStateUpdate } from './state';
 import { SYSTEM_PROMPT } from './prompts';

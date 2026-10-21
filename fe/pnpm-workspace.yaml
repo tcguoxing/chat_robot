@@ -1,3 +1,5 @@
+strictDepBuilds: false
+
 allowBuilds:
   '@parcel/watcher': false
   esbuild: false
